@@ -1,4 +1,4 @@
-package main
+package telegram
 
 import (
 	"context"
@@ -24,6 +24,7 @@ func (s *Service) GetUpdates(ctx context.Context, wg *sync.WaitGroup, token stri
 
 	bot, err := tgbotapi.NewBotAPI(token)
 	if err != nil {
+		println(2)
 		log.Fatal(err)
 	}
 
