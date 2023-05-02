@@ -1,20 +1,11 @@
 package main
 
 import (
-	"encoding/json"
+	"github.com/Ruchanov/TelegramBot/service"
+	"github.com/go-telegram-bot-api/telegram-bot-api"
 	"log"
-	"net/http"
 	"strings"
 	"sync"
-	"time"
-
-	"github.com/go-telegram-bot-api/telegram-bot-api"
-)
-
-const (
-	unsplashAPIURL    = "https://api.unsplash.com/photos/random"
-	unsplashAccessKey = "un_Gg3hwwtJ69cIC7ntFo4tPIwOt_KR8vcWzz2sPWQQ"
-	telegramToken     = "6110459357:AAG9b7-9REqy0k_-lCkB_GTR1uzlVJpb_is"
 )
 
 var (
@@ -24,9 +15,19 @@ var (
 	counter int
 )
 
+func incrementCounter() {
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		mu.Lock()
+		defer mu.Unlock()
+		counter++
+	}()
+}
+
 func main() {
 	var err error
-
+	const telegramToken = "6110459357:AAG9b7-9REqy0k_-lCkB_GTR1uzlVJpb_is"
 	bot, err = tgbotapi.NewBotAPI(telegramToken)
 	if err != nil {
 		log.Fatal(err)
@@ -48,7 +49,7 @@ func main() {
 		if update.Message != nil {
 			if update.Message.IsCommand() || strings.ToLower(update.Message.Text) == "image" {
 				incrementCounter()
-				image, err := fetchRandomImage()
+				image, err := service.FetchRandomImage()
 				if err != nil {
 					log.Println(err)
 					continue
@@ -64,44 +65,4 @@ func main() {
 			}
 		}
 	}
-}
-
-func incrementCounter() {
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		mu.Lock()
-		defer mu.Unlock()
-		counter++
-	}()
-}
-
-type unsplashImage struct {
-	Description string `json:"description"`
-	URLs        struct {
-		Regular string `json:"regular"`
-	} `json:"urls"`
-}
-
-func fetchRandomImage() (*unsplashImage, error) {
-	req, err := http.NewRequest("GET", unsplashAPIURL, nil)
-	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Accept-Version", "v1")
-	req.Header.Set("Authorization", "Client-ID "+unsplashAccessKey)
-
-	client := http.Client{Timeout: time.Second * 10}
-	res, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-
-	var image unsplashImage
-	err = json.NewDecoder(res.Body).Decode(&image)
-	if err != nil {
-		return nil, err
-	}
-	return &image, nil
 }
